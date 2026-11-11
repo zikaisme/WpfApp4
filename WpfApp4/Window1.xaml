@@ -4,20 +4,159 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WpfApp4"
+        xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
         mc:Ignorable="d"
-        Title="Window1" Height="450" Width="800">
+        Title="MyDocumentViewer"
+        Height="450"
+        Width="1000">
 
-    <DockPanel>
+    <Window.Resources>
+        <Style x:Key="IconButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Padding" Value="3"/>
+            <Setter Property="Focusable" Value="False"/>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel LastChildFill="True">
         <ToolBarTray DockPanel.Dock="Top">
-            <ToolBar Height="40">
-                <Button Content="開檔" Width="50"/>
-                <Button Content="儲存" Width="50"/>
+
+            <ToolBar Height="44"
+                     Width="200"
+                     Band="0"
+                     BandIndex="0"
+                     Background="#FFFDE7">
+
+                <Button x:Name="NewButton"
+                        Style="{StaticResource IconButtonStyle}"
+                        ToolTip="新增文件">
+                    <Viewbox>
+                        <Canvas Width="28" Height="28">
+                            <Path Data="M 6,1 L 17,1 L 23,7 L 23,25 Q 23,27 21,27 L 6,27 Q 4,27 4,25 L 4,3 Q 4,1 6,1 Z"
+                                  Stroke="Black" StrokeThickness="1.7"
+                                  StrokeLineJoin="Round" Fill="Transparent"/>
+                            <Path Data="M 17,1 L 17,7 L 23,7 M 9,15 L 18,15 M 13.5,10.5 L 13.5,19.5"
+                                  Stroke="Black" StrokeThickness="1.7"/>
+                        </Canvas>
+                    </Viewbox>
+                </Button>
+
+                <Button x:Name="OpenButton"
+                        Style="{StaticResource IconButtonStyle}"
+                        ToolTip="開啟檔案">
+                    <Viewbox>
+                        <Canvas Width="28" Height="28">
+                            <Path Data="M 2,23 L 2,7 Q 2,5 4,5 L 11,5 L 14,8 L 24,8 L 24,12"
+                                  Stroke="Black" StrokeThickness="1.7"
+                                  StrokeLineJoin="Round" Fill="Transparent"/>
+                            <Path Data="M 2,24 L 7,12 L 27,12 L 22,24 Z"
+                                  Stroke="Black" StrokeThickness="1.7"
+                                  StrokeLineJoin="Round" Fill="#FFFDE7"/>
+                        </Canvas>
+                    </Viewbox>
+                </Button>
+
+                <Button x:Name="SaveButton"
+                        Style="{StaticResource IconButtonStyle}"
+                        ToolTip="儲存檔案">
+                    <Viewbox>
+                        <Canvas Width="28" Height="28">
+                            <Path Data="M 3,2 L 22,2 L 26,6 L 26,26 L 2,26 L 2,2 Z"
+                                  Fill="Black"/>
+                            <Rectangle Canvas.Left="7" Canvas.Top="3"
+                                       Width="14" Height="8" Fill="#FFFDE7"/>
+                            <Rectangle Canvas.Left="16" Canvas.Top="4"
+                                       Width="3" Height="6" Fill="Black"/>
+                            <Rectangle Canvas.Left="7" Canvas.Top="16"
+                                       Width="14" Height="10" Fill="#FFFDE7"/>
+                        </Canvas>
+                    </Viewbox>
+                </Button>
+
+                <Button x:Name="DeleteButton"
+                        Style="{StaticResource IconButtonStyle}"
+                        ToolTip="刪除">
+                    <Viewbox>
+                        <Canvas Width="28" Height="28">
+                            <Path Data="M 4,7 L 24,7 M 10,6 L 10,2 L 18,2 L 18,6 M 6,8 L 7,25 Q 7,26 9,26 L 19,26 Q 21,26 21,25 L 22,8 M 11,11 L 11,22 M 17,11 L 17,22"
+                                  Stroke="Black" StrokeThickness="1.7"
+                                  StrokeLineJoin="Round" Fill="Transparent"/>
+                        </Canvas>
+                    </Viewbox>
+                </Button>
             </ToolBar>
 
             <ToolBar x:Name="EditingToolBar"
-                     Height="40"
-                     Width="377"
+                     Height="44"
+                     Width="740"
+                     Band="0"
+                     BandIndex="1"
                      Background="#FFEEDD">
+
+                <ToggleButton x:Name="BoldButton"
+                              Height="38" Width="38"
+                              Focusable="False"
+                              ToolTip="粗體"
+                              Command="EditingCommands.ToggleBold"
+                              CommandTarget="{Binding ElementName=MainRichTextBox}">
+                    <TextBlock Text="B" FontFamily="Times New Roman"
+                               FontSize="28" FontWeight="Bold"/>
+                </ToggleButton>
+
+                <ToggleButton x:Name="ItalicButton"
+                              Height="38" Width="38"
+                              Focusable="False"
+                              ToolTip="斜體"
+                              Command="EditingCommands.ToggleItalic"
+                              CommandTarget="{Binding ElementName=MainRichTextBox}">
+                    <TextBlock Text="I" FontFamily="Times New Roman"
+                               FontSize="28" FontStyle="Italic"/>
+                </ToggleButton>
+
+                <ToggleButton x:Name="UnderlineButton"
+                              Height="38" Width="38"
+                              Focusable="False"
+                              ToolTip="底線"
+                              Command="EditingCommands.ToggleUnderline"
+                              CommandTarget="{Binding ElementName=MainRichTextBox}">
+                    <TextBlock Text="U" FontFamily="Arial"
+                               FontSize="26" TextDecorations="Underline"/>
+                </ToggleButton>
+
+                <xctk:ColorPicker x:Name="FontColorPicker"
+                                  Width="160" Height="38"
+                                  ToolTip="文字顏色"/>
+
+                <ComboBox x:Name="FontFamilyComboBox"
+                          HorizontalAlignment="Left"
+                          VerticalContentAlignment="Center"
+                          Width="150" Height="38"
+                          Margin="5,0,0,0"
+                          ToolTip="字型"
+                          ItemsSource="{x:Static Fonts.SystemFontFamilies}"
+                          DisplayMemberPath="Source"/>
+
+                <ComboBox x:Name="FontSizeComboBox"
+                          HorizontalAlignment="Left"
+                          VerticalContentAlignment="Center"
+                          Width="150" Height="38"
+                          Margin="5,0,0,0"
+                          ToolTip="字級">
+                    <ComboBoxItem Content="8"/>
+                    <ComboBoxItem Content="10"/>
+                    <ComboBoxItem Content="12"/>
+                    <ComboBoxItem Content="14"/>
+                    <ComboBoxItem Content="16"/>
+                    <ComboBoxItem Content="18"/>
+                    <ComboBoxItem Content="20"/>
+                    <ComboBoxItem Content="24"/>
+                    <ComboBoxItem Content="28"/>
+                    <ComboBoxItem Content="32"/>
+                    <ComboBoxItem Content="36"/>
+                    <ComboBoxItem Content="48"/>
+                    <ComboBoxItem Content="72"/>
+                </ComboBox>
 
             </ToolBar>
         </ToolBarTray>
@@ -27,7 +166,9 @@
                    Background="LightGray"/>
 
         <RichTextBox x:Name="MainRichTextBox"
-                     Background="#FFEFEFEC">
+                     Background="#FFEFEFEC"
+                     BorderThickness="0"
+                     VerticalScrollBarVisibility="Auto">
             <FlowDocument/>
         </RichTextBox>
     </DockPanel>
