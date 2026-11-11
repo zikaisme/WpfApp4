@@ -3,4 +3,5 @@
 
 ## 功能
 1.  引入extendted WPF toolkit
-2.  使用多視窗
+2.  使用按鈕開啟多視窗
+   
