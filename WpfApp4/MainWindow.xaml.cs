@@ -20,5 +20,16 @@ namespace WpfApp4
         {
             InitializeComponent();
         }
+
+        private void OpenButton_Click(object sender, RoutedEventArgs e)
+        {
+           
+        }
+
+        private void OpenButton_Click_1(object sender, RoutedEventArgs e)
+        {
+            Window1 Window1 = new Window1();
+            Window1.Show();
+        }
     }
 }
