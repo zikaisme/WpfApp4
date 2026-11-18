@@ -4,7 +4,7 @@
         xmlns:local="clr-namespace:WpfApp4"
         xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
         Title="MyDocumentViewer"
-        Height="450" Width="1000"
+        Height="450" Width="1080"
         WindowStartupLocation="CenterOwner">
 
     <!-- 自訂路由命令透過 CommandBinding 呼叫 RichTextBox 的編輯功能。
@@ -37,7 +37,7 @@
 
     <DockPanel LastChildFill="True">
         <ToolBarTray DockPanel.Dock="Top">
-            <ToolBar Height="44" Width="210"
+            <ToolBar Height="44" Width="270"
                      Band="0" BandIndex="0" Background="#FFFDE7">
                 <Button Content="複製" ToolTip="複製（Ctrl+C）"
                         Style="{StaticResource EditButtonStyle}"
@@ -51,6 +51,24 @@
                         Style="{StaticResource EditButtonStyle}"
                         Command="{x:Static local:MyDocumentViewer.PasteCommand}"
                         CommandTarget="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
+                <Separator/>
+                <Button x:Name="ClearButton"
+                        Width="38" Height="38" Padding="6"
+                        Focusable="False"
+                        ToolTip="一鍵清除全部內容（可按 Ctrl+Z 復原）"
+                        AutomationProperties.Name="清除全部內容"
+                        Click="ClearButton_Click">
+                    <Viewbox Width="24" Height="24">
+                        <Canvas Width="24" Height="24">
+                            <Path Data="M 3,5 L 21,5 M 9,5 L 9,2 L 15,2 L 15,5
+                                        M 5,5 L 6,21 Q 6,22 8,22 L 16,22
+                                        Q 18,22 18,21 L 19,5
+                                        M 10,9 L 10,18 M 14,9 L 14,18"
+                                  Stroke="#FF333333" StrokeThickness="1.8"
+                                  StrokeLineJoin="Round" Fill="Transparent"/>
+                        </Canvas>
+                    </Viewbox>
+                </Button>
             </ToolBar>
 
             <ToolBar x:Name="EditingToolBar"
@@ -84,20 +102,24 @@
                 <xctk:ColorPicker x:Name="FontColorPicker"
                                   Width="160" Height="38"
                                   ToolTip="文字顏色"
-                                  SelectedColorChanged="FontColorPicker_SelectedColorChanged"/>
+                                  UsingAlphaChannel="False"
+                                  Opened="FontColorPicker_Opened"
+                                  Closed="FontColorPicker_Closed"/>
                 <ComboBox x:Name="FontFamilyComboBox"
                           Width="150" Height="38" Margin="5,0,0,0"
                           HorizontalAlignment="Left"
                           VerticalContentAlignment="Center"
                           DisplayMemberPath="Source"
                           ToolTip="字型"
-                          SelectionChanged="FontFamilyComboBox_SelectionChanged"/>
+                          SelectionChanged="FontFamilyComboBox_SelectionChanged"
+                          DropDownClosed="FontComboBox_DropDownClosed"/>
                 <ComboBox x:Name="FontSizeComboBox"
                           Width="150" Height="38" Margin="5,0,0,0"
                           HorizontalAlignment="Left"
                           VerticalContentAlignment="Center"
                           ToolTip="字級（WPF 單位）"
-                          SelectionChanged="FontSizeComboBox_SelectionChanged"/>
+                          SelectionChanged="FontSizeComboBox_SelectionChanged"
+                          DropDownClosed="FontComboBox_DropDownClosed"/>
             </ToolBar>
         </ToolBarTray>
 

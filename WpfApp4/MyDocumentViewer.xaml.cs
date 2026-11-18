@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace WpfApp4
 {
@@ -22,6 +23,11 @@ namespace WpfApp4
 
         private bool _isReady;
         private bool _isUpdatingToolbar;
+        private bool _isColorPickerOpen;
+        private Color? _colorAtOpen;
+        private TextPointer? _colorSelectionStart;
+        private TextPointer? _colorSelectionEnd;
+        private int _focusRequestVersion;
         private readonly List<FontFamily> _fontFamilies;
         private readonly double[] _fontSizes =
         {
@@ -98,16 +104,135 @@ namespace WpfApp4
             e.Handled = true;
         }
 
-        // ===== README 6：第三方 ColorPicker 套用文字顏色 =====
-
-        private void FontColorPicker_SelectedColorChanged(
-            object? sender, RoutedPropertyChangedEventArgs<Color?> e)
+        // 選色期間只讓 ColorPicker 處理色盤，不立即搶回鍵盤焦點。
+        private void FontColorPicker_Opened(object? sender, RoutedEventArgs e)
         {
-            if (!_isReady || _isUpdatingToolbar || !e.NewValue.HasValue)
+            if (!_isReady || !ReferenceEquals(e.OriginalSource, FontColorPicker))
                 return;
 
-            SolidColorBrush brush = new SolidColorBrush(e.NewValue.Value);
-            ApplySelectionProperty(TextElement.ForegroundProperty, brush);
+            _focusRequestVersion++;
+            _colorAtOpen = FontColorPicker.SelectedColor;
+            _colorSelectionStart = MainRichTextBox.Selection.Start;
+            _colorSelectionEnd = MainRichTextBox.Selection.End;
+            _isColorPickerOpen = true;
+        }
+
+        private void FontColorPicker_Closed(object? sender, RoutedEventArgs e)
+        {
+            if (!_isReady || !_isColorPickerOpen
+                || !ReferenceEquals(e.OriginalSource, FontColorPicker))
+                return;
+
+            // 使用關閉時的最終顏色：Esc 取消時，Toolkit 會還原原色。
+            Color? chosenColor = FontColorPicker.SelectedColor;
+            bool colorChanged = chosenColor.HasValue && chosenColor != _colorAtOpen;
+            TextPointer? start = _colorSelectionStart;
+            TextPointer? end = _colorSelectionEnd;
+            _isColorPickerOpen = false;
+            _colorSelectionStart = null;
+            _colorSelectionEnd = null;
+
+            int requestVersion = ++_focusRequestVersion;
+            // Toolkit 關閉色盤後還會將焦點設回自身按鈕。
+            // 排到事件完成之後，才能讓鍵盤焦點真正留在 RichTextBox。
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
+            {
+                if (requestVersion != _focusRequestVersion || !IsVisible
+                    || !IsActive || FontColorPicker.IsOpen)
+                    return;
+
+                if (colorChanged && chosenColor.HasValue && start != null && end != null)
+                {
+                    _isUpdatingToolbar = true;
+                    try
+                    {
+                        MainRichTextBox.Focus();
+                        Keyboard.Focus(MainRichTextBox);
+                        MainRichTextBox.Selection.Select(start, end);
+                        Color color = chosenColor.Value;
+                        // 文字顏色使用不透明 RGB，避免透明字造成「打字看不見」。
+                        MainRichTextBox.Selection.ApplyPropertyValue(
+                            TextElement.ForegroundProperty,
+                            new SolidColorBrush(Color.FromRgb(color.R, color.G, color.B)));
+                    }
+                    finally
+                    {
+                        _isUpdatingToolbar = false;
+                    }
+                }
+                else
+                {
+                    MainRichTextBox.Focus();
+                    Keyboard.Focus(MainRichTextBox);
+                }
+
+                UpdateToolbarFromSelection();
+            }));
+        }
+
+        // 一鍵清除全文，保留原本的 FlowDocument 與復原紀錄。
+        private void ClearButton_Click(object? sender, RoutedEventArgs e)
+        {
+            if (!_isReady || MainRichTextBox.IsReadOnly)
+                return;
+
+            _focusRequestVersion++;
+            _isUpdatingToolbar = true;
+            MainRichTextBox.Focus();
+            Keyboard.Focus(MainRichTextBox);
+            MainRichTextBox.BeginChange();
+            try
+            {
+                MainRichTextBox.SelectAll();
+                MainRichTextBox.Selection.Text = string.Empty;
+                MainRichTextBox.CaretPosition =
+                    MainRichTextBox.Document.ContentStart.GetInsertionPosition(
+                        LogicalDirection.Forward) ?? MainRichTextBox.Document.ContentStart;
+
+                // 清空後以預設格式輸入，避免沿用之前的透明色或大字。
+                TextSelection selection = MainRichTextBox.Selection;
+                selection.ApplyPropertyValue(TextElement.ForegroundProperty, Brushes.Black);
+                selection.ApplyPropertyValue(TextElement.FontFamilyProperty,
+                    MainRichTextBox.Document.FontFamily);
+                selection.ApplyPropertyValue(TextElement.FontSizeProperty,
+                    MainRichTextBox.Document.FontSize);
+                selection.ApplyPropertyValue(TextElement.FontWeightProperty, FontWeights.Normal);
+                selection.ApplyPropertyValue(TextElement.FontStyleProperty, FontStyles.Normal);
+                selection.ApplyPropertyValue(Inline.TextDecorationsProperty,
+                    new TextDecorationCollection());
+            }
+            finally
+            {
+                try
+                {
+                    MainRichTextBox.EndChange();
+                }
+                finally
+                {
+                    _isUpdatingToolbar = false;
+                }
+            }
+
+            UpdateToolbarFromSelection();
+            CommandManager.InvalidateRequerySuggested();
+        }
+
+        private void FontComboBox_DropDownClosed(object? sender, EventArgs e)
+        {
+            if (!_isReady)
+                return;
+
+            int requestVersion = ++_focusRequestVersion;
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
+            {
+                if (requestVersion != _focusRequestVersion || !IsVisible
+                    || !IsActive || FontColorPicker.IsOpen
+                    || FontFamilyComboBox.IsDropDownOpen || FontSizeComboBox.IsDropDownOpen)
+                    return;
+
+                MainRichTextBox.Focus();
+                Keyboard.Focus(MainRichTextBox);
+            }));
         }
 
         // ===== README 7：選擇文字字型 =====
@@ -140,10 +265,18 @@ namespace WpfApp4
 
         private void ApplySelectionProperty(DependencyProperty property, object value)
         {
-            // 選取文字時套用至選取範圍；只有游標時，設定接下來輸入的格式。
-            // ComboBox / ColorPicker 取得焦點時，RichTextBox 仍保留原選取範圍。
-            MainRichTextBox.Selection.ApplyPropertyValue(property, value);
-            MainRichTextBox.Focus();
+            // 先還原編輯焦點，再設定插入格式，避免焦點切換覆寫新格式。
+            _isUpdatingToolbar = true;
+            try
+            {
+                MainRichTextBox.Focus();
+                Keyboard.Focus(MainRichTextBox);
+                MainRichTextBox.Selection.ApplyPropertyValue(property, value);
+            }
+            finally
+            {
+                _isUpdatingToolbar = false;
+            }
             UpdateToolbarFromSelection();
         }
 
@@ -158,7 +291,7 @@ namespace WpfApp4
 
         private void UpdateToolbarFromSelection()
         {
-            if (!_isReady || _isUpdatingToolbar)
+            if (!_isReady || _isUpdatingToolbar || _isColorPickerOpen)
                 return;
 
             // 更新選單時，避免 SelectionChanged 再把格式套用回文件。
